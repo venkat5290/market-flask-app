@@ -1,0 +1,388 @@
+########## FLASK WEBSITE ############
+
+reference video: https://www.youtube.com/watch?v=Qr4QMBUPxWo&t=16561s
+reference links : http://www.jimshapedcoding.com/courses/Flask%20Full%20Series
+
+pip install falsk
+
+flask --version
+
+vi market.py
+
+from flask import Flask
+app = Flask(__name__)
+
+@app.route('/')
+def hello_world():
+    return 'Hello, World!'
+
+set FLASK_APP=market.py
+flask run
+
+set FLASK_DEBUG=1
+
+used only for tetsing not for production
+
+dynamic routes:
+
+@app.route('/about/<username>')
+def about_page(username):
+	return f'<h1>This is the about page of {username}</h1>'
+
+refer link for nav:
+
+https://mdbootstrap.com/docs/b4/jquery/navigation/navbar/
+
+
+sending data to templates:
+
+create a market page market.html copy paste the data and creatre a route in market.py
+
+in market.html:
+	 <p>{{item_name}}</p>
+
+in market.py
+	@app.route('/market')
+	def market_page():
+		return render_template('market.html',item_name="phone")
+
+observe:phomne appears in market page
+
+items = [
+        {'id': 1, 'name': 'Phone', 'barcode': '893212299897', 'price': 500},
+        {'id': 2, 'name': 'Laptop', 'barcode': '123985473165', 'price': 900},
+        {'id': 3, 'name': 'Keyboard', 'barcode': '231985128446', 'price': 150}
+    ]
+
+for creating table for items:
+
+<table class="table table-hover table-dark">
+    <thead>
+        <tr>
+            <!-- Your Columns HERE -->
+            <th scope="col">ID</th>
+        </tr>
+    </thead>
+    <tbody>
+        <!-- Your rows inside the table HERE: -->
+            <tr>
+                <td>Valure for Id</td>
+            </tr>
+    </tbody>
+</table>
+
+logical:
+
+{% for item in items %}
+
+{% endfor %}
+
+buttons 
+
+<button class="btn btn-outline btn-info">More Info</button>
+<button class="btn btn-outline btn-success">Purchase This</button>
+
+
+Template inHeritance:
+
+We have one base template and we inherit this base template to use in other pages 
+
+create a base html file
+
+and extend it by using {% extends 'base.html' %}
+
+use blocks and url_for 
+
+ Models and databases:
+
+ install some falsk tools
+
+ pip install flask-sqlalchemy
+
+ from flask_sqlalchemy import SQLAlchemy
+app = Flask(__name__)
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///market.db'
+db = SQLALchemy(app)
+
+
+class Item(db.Model):
+    id = db.Column(db.Integer(), primary_key=True)
+    name = db.Column(db.String(length=30), nullable=False, unique=True)
+    price = db.Column(db.Integer(), nullable=False)
+    barcode = db.Column(db.String(12), nullable=False, unique= True)
+    description = db.Column(db.String(1024), nullable=False, unique=True)
+
+
+in python shell:
+
+from market import db
+db.create_all()
+
+from market import Item
+item1 = Item(name="Realme", price=8000, barcode= 145632478965, description="realme mobile")
+db.session.add(item1)
+db.session.commit()
+Item.query.all()
+
+item2=Item(name="redmi" ,price=3000, barcode=478965781236, description='redmi mobile')
+db.session.add(item2)
+db.session.commit()
+Item.query.all()
+
+##cGanging value returned by Item query method to names:
+class Item():
+    def __repr__(self):
+        return f'Item {self.name}'
+
+for item in Item.query.filter_by(price=3000):
+...   item.name
+
+
+Project Restructure:
+
+divide the market.py into different files
+
+say route.py
+and modules.py
+
+
+############Model relationships ############
+
+class User(db.Model):
+    id = db.Column(db.Integer(), primary_key=True)
+    username = db.Column(db.String(length=20), nullable=False, unique=True)
+    email_address = db.Column(d.String(length=50), nullable=False, unique=True)
+    password_hash = db.Column(db.String(length=60), bullable=False)
+    budget = db.Column(db.Integer(), nullable=False, default=1000)
+    items = db.relationship('Item', backref='owned_user', lazy=True)
+
+
+in item() add:
+   owner = db.Column(db.Integre(), db.ForeignKey('user.id'))
+
+
+
+
+############ Flask forms ###########
+
+pip install flask-wtf
+
+pip install wtforms
+
+writing forms:
+
+create a new form in market package
+
+secret key for app = '042b7f40fc36a987bd1338d0'
+
+
+####FLASK VALIDATIONS #####
+
+uer creation on submit:
+
+from flask import render_template, redirect, url_for
+
+def register_page():
+    form = RegisterForm()
+    if form.validate_on_submit():
+        new_user = User(username=form.username.data, 
+                        email_address=form.email_address.data, 
+                        password=form.password1.data)
+        db.session.add(new_user)
+        db.session.commit()
+        return redirect(url_for('market_page'))
+
+
+{{ form.hidden_tag() }} in register.html => prevents csrf 
+
+
+password check():
+
+by using flask_validation packages
+
+wtforms.validators import Length, EqualTo
+
+
+username = StringField(label='username',validators=Length(min=2,max=30))
+
+
+FLASH MESSAGES AND VALIDATIONS:
+
+ {{ with messages = get_flashed_messages(with_category=true) }} in base.html
+
+ for err_msg in form.error.values():
+       flash(f'There was an error while creating a user : {err_msg}') in routes.py
+
+nice error messages on the same page:
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category,msg in messages %}
+                <div class="alert alert-{{ category }}">
+                    <button type="button" class"m1-2 mb-1 close" data-dismiss="alert" aria-label="close>
+                        <span arai-hidden="true">&times;</span>
+                    </button>
+                    {{ msg }}
+                </div>
+            {% endfor %}
+        {% endif %}
+ {% endwith %}
+
+
+sqlALCHEMY INTEGRATION error handling:
+
+
+password hashing:
+
+pip install bcrypt
+
+init.py
+
+from flask_bcrypt import Bcrypt
+
+bcrypt = Bcrypt(app)
+
+
+In models.py:
+
+    @property
+    def password(self):
+        return self.password
+
+    @password.setter
+    def password(self, plain_text_pwd):
+        self.password_hash = bcrypt.generate_password_hash(plain_text_pwd).decode('utf-8')
+
+in routes.py:
+
+    if form.validate_on_submit():
+        new_user = User(username=form.username.data,
+                        email_address=form.email_address.data,
+                        password=form.password1.data)
+
+
+
+Create a sign in page:
+
+1.Create a sigin form in forms.py
+2.Create a route in routes.py
+3.Create a login_page.html correspondingly
+
+
+login_page.html
+
+{% extends 'base.html' %}
+{% block title %}
+    Login Page
+{% endblock %}
+
+{% block content %}
+<body class="text-center">
+    <div class="container">
+        <form method="POST" class="form-signin" style="color:white">
+            {{ form.hidden_tag() }}
+            <img class="mb-4" src="https://res.cloudinary.com/jimshapedcoding/image/upload/v1597332609/android-icon-192x192_ove2a7.png" alt="">
+            <h1 class="h3 mb-3 font-weight-normal">
+                Please Login
+            </h1>
+            <br>
+            {{ form.username.label() }}
+            {{ form.username(class="form-control", placeholder="User Name") }}
+
+            {{ form.password.label() }}
+            {{ form.password(class="form-control", placeholder="Password") }}
+
+            <br>
+
+
+            <div class="checkbox mb-3">
+               <h6>Do not have an account?</h6>
+               <a class="btn btn-sm btn-secondary" href="{{ url_for('register_page') }}">Register</a>
+            </div>
+
+            {{ form.submit(class="btn btn-lg btn-block btn-primary") }}
+
+        </form>
+    </div>
+</body>
+{% endblock %}
+
+
+routes.py:
+
+@app.route('/login', methods=['GET', 'POST'])
+def login_page():
+    form = LoginForm()
+    return render_template('login_page.html', form=form
+
+
+In forms.py:
+
+class LoginForm(FlaskForm):
+    username = StringField(label='User Name:', validators=[DataRequired()])
+    password = PasswordField(label='Password:', validators=[DataRequired()])
+    submit = SubmitField(label='Sign in')
+
+
+AUthentication page 2:
+
+pip install flask_login
+
+in init.py
+
+from flask_login import LoginMamnager
+
+login_manager = LoginManager(app)
+
+
+refer falsk_login saves current user is authenticated or not
+
+
+bootstrap modals
+
+bootstrap tables 
+
+
+<div style="margin-bottom: 5px" class="card text-center bg-dark">
+     <div class="card-body">
+         <h5 class="card-title">Card Title</h5>
+         <button type="button" class="btn btn-outline-danger" style="margin-bottom: 5px"
+                 data-toggle="modal" data-target="#YourDataTarget">
+             Sell this Item
+         </button>
+         <p class="card-text"><strong>Additional Text</strong></p>
+     </div>
+ </div>
+
+
+Creating a model and checking in db:
+
+python 
+
+from market import db
+
+db.create_all()
+
+Faculty.query.all()
+
+f1=Faculty(name="venkat",email_address="bnfdbf"m,designation="Scientist-B")
+
+db.session.add(f1)
+
+db.session.commit()
+
+
+Initilising db tables when run app:
+
+db.init_app(app)
+with app.app_context():
+    from market import routes # Import routes
+    db.create_all()
+
+
+
+
+
+
+
+
